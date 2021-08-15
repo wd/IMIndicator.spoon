@@ -1,0 +1,31 @@
+#+TITLE: Readme
+
+This spoon can show a indicator for you IM status.
+
+#+html: <img width=500px src="https://github.com/wd/IMIndicator.spoon/blob/main/screenshots/term.jpg?raw=true" />
+#+html: <img width=500px src="https://github.com/wd/IMIndicator.spoon/blob/main/screenshots/Chrome.jpg?raw=true" />
+
+** Install
+
+#+begin_src shell
+cd ~/.hammerspoon/Spoons/
+git clone https://github.com/wd/IMIndicator.spoon
+#+end_src
+
+** Usage
+
+Put the codes below to your =.hammerspoon/init.lua=
+
+#+begin_src lua
+local imIndicator = hs.loadSpoon("IMIndicator")
+
+-- watch these apps
+imIndicator.start({
+  "com.tinyspeck.slackmacgap",
+  "com.tencent.xinWeChat",
+  "org.gnu.Emacs",
+  "net.kovidgoyal.kitty",
+  "com.google.Chrome",
+  "ru.keepcoder.Telegram",
+})
+#+end_src
