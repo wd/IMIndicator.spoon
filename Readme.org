@@ -29,3 +29,6 @@ imIndicator.start({
   "ru.keepcoder.Telegram",
 })
 #+end_src
+
+** Thanks
+- This project was heavly inspired by https://github.com/dbalatero/VimMode.spoon
