@@ -24,6 +24,61 @@ obj.indicatorChar = "双"
 obj.apps = {}
 
 local lastInputSourceId = hs.keycodes.currentSourceID()
+local alreadyPatchedApps = {}
+
+local isTextField = function(element)
+  if not element then return false end
+  local role = element:attributeValue("AXRole")
+  return role == "AXTextField" or role == "AXTextArea" or role == "AXComboBox"
+end
+
+local getFocusedElementPosition = function()
+  local systemElement = ax.systemWideElement()
+  if not systemElement then return nil end
+
+  local currentElement = systemElement:attributeValue("AXFocusedUIElement")
+  if not currentElement then return nil end
+
+  if not isTextField(currentElement) then return nil end
+
+  local position = currentElement:attributeValue('AXPosition')
+  if not position then return nil end
+
+  return {
+    x = position.x,
+    y = position.y
+  }
+end
+
+ -- patching Accessibility APIs on a per-app basis
+local patchChromiumWithAccessibilityFlag = function(axApp)
+  -- Google Chrome needs this flag to turn on accessibility in the browser
+  axApp:setAttributeValue('AXEnhancedUserInterface', true)
+end
+
+local patchElectronAppsWithAccessibilityFlag = function(axApp)
+  -- Electron apps require this attribute to be set or else you cannot
+  -- read the accessibility tree
+  axApp:setAttributeValue('AXManualAccessibility', true)
+end
+
+
+local patchCurrentApplication = function(currentApp)
+  -- local currentApp = hs.application.frontmostApplication()
+
+  -- cache whether we patched it already by app name and pid
+  -- pray for no collisions hahahahahhahaha
+  local patchKey = currentApp:name() .. currentApp:pid()
+  if alreadyPatchedApps[patchKey] then return end
+
+  alreadyPatchedApps[patchKey] = true
+  local axApp = ax.applicationElement(currentApp)
+
+  if axApp then
+    patchChromiumWithAccessibilityFlag(axApp)
+    patchElectronAppsWithAccessibilityFlag(axApp)
+  end
+end
 
 obj.start = function(apps)
   for i, v in ipairs(apps) do obj.apps[v] = true end
@@ -65,6 +120,7 @@ obj.watchApplications = function()
   for appId, _ in pairs(obj.apps) do
     local app = hs.application.get(appId)
     if app ~= nil then
+      patchCurrentApplication(app)
       local watcher = app:newWatcher(obj.focuseHandler)
       watcher:start({hs.uielement.watcher.focusedElementChanged,
                      hs.uielement.watcher.applicationActivated,
@@ -75,7 +131,7 @@ end
 
 
 obj.getIndicatorPos = function()
-  local elementPosition = obj.getFocusedElementPosition()
+  local elementPosition = getFocusedElementPosition()
 
   if elementPosition then
     local xOffset = 3 -- it is a pleasing offset
@@ -165,30 +221,6 @@ obj.drawIndicator = function()
       })
   })
   obj.canvas = canvas
-end
-
-obj.isTextField = function(element)
-  if not element then return false end
-  local role = element:attributeValue("AXRole")
-  return role == "AXTextField" or role == "AXTextArea" or role == "AXComboBox"
-end
-
-obj.getFocusedElementPosition = function()
-  local systemElement = ax.systemWideElement()
-  if not systemElement then return nil end
-
-  local currentElement = systemElement:attributeValue("AXFocusedUIElement")
-  if not currentElement then return nil end
-
-  if not obj.isTextField(currentElement) then return nil end
-
-  local position = currentElement:attributeValue('AXPosition')
-  if not position then return nil end
-
-  return {
-    x = position.x,
-    y = position.y
-  }
 end
 
 return obj
