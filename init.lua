@@ -51,38 +51,17 @@ local getFocusedElementPosition = function()
 end
 
  -- patching Accessibility APIs on a per-app basis
-local patchChromiumWithAccessibilityFlag = function(axApp)
-  -- Google Chrome needs this flag to turn on accessibility in the browser
-  axApp:setAttributeValue('AXEnhancedUserInterface', true)
-end
-
-local patchElectronAppsWithAccessibilityFlag = function(axApp)
-  -- Electron apps require this attribute to be set or else you cannot
-  -- read the accessibility tree
-  axApp:setAttributeValue('AXManualAccessibility', true)
-end
-
-
 local patchCurrentApplication = function(currentApp)
-  -- local currentApp = hs.application.frontmostApplication()
-
-  -- cache whether we patched it already by app name and pid
-  -- pray for no collisions hahahahahhahaha
-  local patchKey = currentApp:name() .. currentApp:pid()
-  if alreadyPatchedApps[patchKey] then return end
-
-  alreadyPatchedApps[patchKey] = true
-  local axApp = ax.applicationElement(currentApp)
+  local axApp = hs.axuielement.applicationElement(currentApp)
 
   if axApp then
-    patchChromiumWithAccessibilityFlag(axApp)
-    patchElectronAppsWithAccessibilityFlag(axApp)
+    axApp:setAttributeValue('AXManualAccessibility', true)
   end
 end
 
 obj.start = function(apps)
   for i, v in ipairs(apps) do obj.apps[v] = true end
-  obj.watchApplications()
+  hs.application.watcher.new(obj.watchApplication):start()
   hs.keycodes.inputSourceChanged(obj.inputChangeHandler)
   obj.drawIndicator()
 end
@@ -116,17 +95,22 @@ obj.focuseHandler = function(ele, event)
   return true
 end
 
-obj.watchApplications = function()
-  for appId, _ in pairs(obj.apps) do
-    local app = hs.application.get(appId)
-    if app ~= nil then
-      patchCurrentApplication(app)
-      local watcher = app:newWatcher(obj.focuseHandler)
-      watcher:start({hs.uielement.watcher.focusedElementChanged,
-                     hs.uielement.watcher.applicationActivated,
-                     hs.uielement.watcher.applicationDeactivated})
-    end
+obj.watchApplication = function(appName, eventType, app)
+  if obj.apps[app:bundleID()] == nil then return end
+
+  local patchKey = app:name() .. app:pid()
+  if alreadyPatchedApps[patchKey] then return end
+
+  local fn = function()
+    patchCurrentApplication(app)
+    local watcher = app:newWatcher(obj.focuseHandler)
+    watcher:start({hs.uielement.watcher.focusedElementChanged,
+                   hs.uielement.watcher.applicationActivated,
+                   hs.uielement.watcher.applicationDeactivated})
   end
+
+  hs.timer.doAfter(5,fn)
+  alreadyPatchedApps[patchKey] = true
 end
 
 
