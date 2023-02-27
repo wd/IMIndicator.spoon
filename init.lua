@@ -109,7 +109,7 @@ obj.watchApplication = function(appName, eventType, app)
                    hs.uielement.watcher.applicationDeactivated})
   end
 
-  hs.timer.doAfter(5,fn)
+  -- hs.timer.doAfter(10,fn) -- 10s is a workaround
   alreadyPatchedApps[patchKey] = true
 end
 
@@ -195,12 +195,12 @@ obj.drawIndicator = function()
       type = 'text',
       action = 'fill',
       frame = {
-        x = "10%", y = "5%", h = "100", w = "95%"
+        x = "10%", y = "5%", h = "90", w = "95%"
       },
       text = hs.styledtext.new(
         obj.indicatorChar,
         {
-          font = { name = "Courier New Bold", size = 14 },
+          font = { name = "PingFang SC", size = 14 },
           color = { white = 1.0 }
       })
   })
